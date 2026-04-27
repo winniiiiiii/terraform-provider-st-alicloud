@@ -3,9 +3,11 @@ package alicloud
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	util "github.com/alibabacloud-go/tea-utils/v2/service"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -190,4 +192,24 @@ func (r *foasconsoleNamespaceSpecResource) Update(ctx context.Context, req resou
 
 func (r *foasconsoleNamespaceSpecResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Delete logic is empty because just modifying an existing workspace namespace.
+}
+
+func (r *foasconsoleNamespaceSpecResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// The user will run: terraform import st-alicloud_flink_namespace.example "workspace_id:namespace_name"
+	// Example: terraform import st-alicloud_flink_namespace.example "f-cn-wwo36qj4g06:default"
+
+	idParts := strings.Split(req.ID, ":")
+
+	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier with format: instance_id:namespace. Got: %q", req.ID),
+		)
+		return
+	}
+
+	// Save the split parts into the Terraform state
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("namespace"), idParts[1])...)
 }
